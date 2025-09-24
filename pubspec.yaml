@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
+  flutter_native_splash: ^2.4.0
   flutter_test:
     sdk: flutter
 
@@ -87,3 +88,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_native_splash:
+  color: "#ffffff"                          # 배경색
+  image: assets/icon/app_icon.png           # 앱 로고
+  branding: assets/icon/branding.png        # 하단 브랜드 이미지
+  android: true
+  ios: true

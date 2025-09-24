@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="fm2025"
+        android:label="fm2025_Dev"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
