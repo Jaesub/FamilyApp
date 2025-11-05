@@ -6,11 +6,14 @@ import '../family/family_page.dart';
 class HomePage extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onToggleDarkMode;
+  //final VoidCallback onLogout;
+  final Future<void> Function() onLogout;
 
   const HomePage({
     super.key,
     required this.isDarkMode,
     required this.onToggleDarkMode,
+    required this.onLogout,
   });
 
   @override
@@ -77,13 +80,24 @@ class _HomePageState extends State<HomePage> {
               value: widget.isDarkMode,
               onChanged: (_) => widget.onToggleDarkMode(),
             ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text("로그아웃"),
+              onTap: () async {
+                Navigator.pop(context);
+                await widget.onLogout(); // 실제 로그아웃
+                if (!mounted) return;
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(const SnackBar(content: Text("로그아웃 되었어요.")));
+              },
+            ),
           ],
         ),
       ),
       body: _getPage(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
+        onTap: (i) => setState(() => _selectedIndex = i),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
           BottomNavigationBarItem(icon: Icon(Icons.article), label: "게시판"),
