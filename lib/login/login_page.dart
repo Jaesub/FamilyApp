@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../models/user.dart';
 
 class LoginPage extends StatefulWidget {
   final AuthService auth;
-  final VoidCallback onLoggedIn;
+  // final VoidCallback onLoggedIn;
 
-  const LoginPage({super.key, required this.auth, required this.onLoggedIn});
+  const LoginPage({super.key, required this.auth});//, required this.onLoggedIn});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -29,8 +30,18 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await widget.auth.login(email: _emailCtr.text.trim(), password: _pwCtr.text);
-      widget.onLoggedIn();
+      // await widget.auth.login(email: _emailCtr.text.trim(), password: _pwCtr.text);
+      // widget.onLoggedIn();
+      /// 로그인 수행 → AuthService가 User 반환
+      final User user = await widget.auth.login(
+        email: _emailCtr.text.trim(),
+        password: _pwCtr.text,
+      );
+      /// 로그인 성공 → 현재 페이지 pop 하면서 User 반환
+      if (!mounted) return;
+      // Navigator.of(context).pop<User>(user); // 성공 시 User 반환
+      Navigator.pop(context, user);
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
@@ -68,7 +79,8 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) return '이메일을 입력하세요.';
-                        if (!v.contains('@')) return '올바른 이메일을 입력하세요.';
+                        // if (!v.contains('@')) return '올바른 이메일을 입력하세요.';
+                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) return '올바른 이메일을 입력하세요.';
                         return null;
                       },
                     ),
@@ -76,6 +88,11 @@ class _LoginPageState extends State<LoginPage> {
                     TextFormField(
                       controller: _pwCtr,
                       obscureText: _obscure,
+                      keyboardType: TextInputType.visiblePassword,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      textInputAction: TextInputAction.done,
+                      autofillHints: const [AutofillHints.password],
                       decoration: InputDecoration(
                         labelText: '비밀번호',
                         prefixIcon: const Icon(Icons.lock),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'board_controller.dart';
 import 'board_model.dart';
 
+// 게시판 페이지
 class BoardPage extends StatefulWidget {
   final BoardController controller; // 외부에서 입력받음
   const BoardPage({super.key, required this.controller});
