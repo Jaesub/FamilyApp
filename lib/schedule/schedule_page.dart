@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'schedule_controller.dart';
 import 'schedule_model.dart';
-import 'schedule_list.dart';
-import 'schedule_calendar.dart';
+import 'schedule_list_tab.dart';
+import 'schedule_calendar_tab.dart';
+import 'schedule_edit_page.dart';
 
 // "일정" 메인 화면: 상단 TabBar(리스트/달력) + 카테고리 필터(전체/중요/기타)
 class SchedulePage extends StatefulWidget {
@@ -110,14 +111,27 @@ class _SchedulePageState extends State<SchedulePage> with TickerProviderStateMix
 
       // 우측 하단 + 버튼(임시로 오늘 날짜에 일정 추가)
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: 실제로는 "일정 추가 페이지"로 이동시키면 됨
-          // 지금은 임시로 오늘 날짜에 빠른 추가
-          ctrl.addQuick(day: DateTime.now());
-          setState(() {});
+        onPressed: () async {
+          final changed = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (_) => ScheduleEditPage(controller: ctrl),
+            ),
+          );
+          if (changed == true) setState(() {});
         },
         child: const Icon(Icons.add),
       ),
+
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {
+      //     // TODO: 실제로는 "일정 추가 페이지"로 이동시키면 됨
+      //     // 지금은 임시로 오늘 날짜에 빠른 추가
+      //     ctrl.addQuick(day: DateTime.now());
+      //     setState(() {});
+      //   },
+      //   child: const Icon(Icons.add),
+      // ),
+
     );
   }
 }

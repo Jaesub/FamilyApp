@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'schedule_controller.dart';
 import 'schedule_model.dart';
+import 'schedule_edit_page.dart';
 
 class ScheduleListTab extends StatelessWidget {
   final ScheduleController controller;
@@ -44,10 +45,24 @@ class ScheduleListTab extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 8, top: 8),
             child: Text(month, style: Theme.of(context).textTheme.titleMedium),
           ),
-          for (final it in grouped[month]!) _ScheduleCard(item: it, onDelete: () {
-            controller.remove(it.id);
-            onChanged();
-          }),
+
+          // 카드 생성 부분 수정
+          for (final it in grouped[month]!)
+            _ScheduleCard(
+              item: it,
+              onTap: () async {
+                final changed = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => ScheduleEditPage(controller: controller, item: it),
+                  ),
+                );
+                if (changed == true) onChanged();
+              },
+              onDelete: () {
+                controller.remove(it.id);
+                onChanged();
+              },
+            ),
           const SizedBox(height: 8),
         ]
       ],
@@ -58,8 +73,13 @@ class ScheduleListTab extends StatelessWidget {
 class _ScheduleCard extends StatelessWidget {
   final ScheduleItem item;
   final VoidCallback onDelete;
+  final VoidCallback onTap;
 
-  const _ScheduleCard({required this.item, required this.onDelete});
+  const _ScheduleCard({
+    required this.item,
+    required this.onDelete,
+    required this.onTap
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +90,7 @@ class _ScheduleCard extends StatelessWidget {
 
     return Card(
       child: ListTile(
+        onTap: onTap,  // ✅ 탭하면 수정 화면
         title: Text(item.title),
         subtitle: item.memo == null ? null : Text(item.memo!, maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: Column(

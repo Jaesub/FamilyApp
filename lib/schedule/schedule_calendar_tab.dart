@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'schedule_controller.dart';
 import 'schedule_model.dart';
+import 'schedule_edit_page.dart';
 
 // 달력 탭: 달력에서 날짜 선택 → 해당 날짜 일정만 아래 리스트로 노출
 class ScheduleCalendarTab extends StatefulWidget {
@@ -42,9 +43,22 @@ class _ScheduleCalendarTabState extends State<ScheduleCalendarTab> {
             itemCount: events.length,
             itemBuilder: (_, i) {
               final it = events[i];
+
+              // 리스트 추가
               return ListTile(
                 title: Text(it.title),
                 subtitle: it.memo == null ? null : Text(it.memo!),
+                onTap: () async {
+                  final changed = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (_) => ScheduleEditPage(controller: widget.controller, item: it),
+                    ),
+                  );
+                  if (changed == true) {
+                    widget.onChanged();
+                    setState(() {});
+                  }
+                },
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline),
                   onPressed: () {
