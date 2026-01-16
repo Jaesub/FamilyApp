@@ -55,6 +55,21 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        // backgroundColor: Colors.transparent,
+        // elevation: 0,
+        // title: const Text(''),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            final nav = Navigator.of(context);
+            if(nav.canPop()) {
+              nav.pop();
+            }
+          }
+        ),
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
