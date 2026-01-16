@@ -3,6 +3,8 @@ import '../board/board_page.dart';
 import '../board/board_controller.dart';
 import '../family/family_page.dart';
 import '../models/user.dart';
+import '../schedule/schedule_page.dart';
+import '../schedule/schedule_controller.dart';
 
 class HomePage extends StatefulWidget {
   final bool isDarkMode;
@@ -30,6 +32,8 @@ class _HomePageState extends State<HomePage> {
 
   // 게시판 컨트롤러를 HomePage에서 관리 (한번만 생성)
   final BoardController _boardController = BoardController();
+  // 스케줄 컨트롤러
+  final ScheduleController _scheduleController = ScheduleController();
 
   void _onSelectMenu(int index) {
     Navigator.pop(context);
@@ -46,6 +50,8 @@ class _HomePageState extends State<HomePage> {
         return BoardPage(controller: _boardController);
       case 2:
         return const FamilyPage();
+      case 3:
+        return SchedulePage(controller: _scheduleController);
       default:
         return const Center(child: Text("알 수 없는 화면"));
     }
@@ -95,6 +101,12 @@ class _HomePageState extends State<HomePage> {
               title: const Text("가계도"),
               selected: _selectedIndex == 2,
               onTap: () => _onSelectMenu(2),
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_month),
+              title: const Text("일정"),
+              selected: _selectedIndex == 3,
+              onTap: () => _onSelectMenu(3),
             ),
             SwitchListTile(
               title: const Text("다크모드"),
@@ -147,12 +159,14 @@ class _HomePageState extends State<HomePage> {
       ),
       body: _getPage(),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: (i) => setState(() => _selectedIndex = i),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
           BottomNavigationBarItem(icon: Icon(Icons.article), label: "게시판"),
           BottomNavigationBarItem(icon: Icon(Icons.family_restroom), label: "가계도"),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: "일정"),
         ],
       ),
     );
