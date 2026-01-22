@@ -40,7 +40,7 @@ class _SchedulePageState extends State<SchedulePage> with TickerProviderStateMix
       case ScheduleCategory.important:
         return '중요';
       case ScheduleCategory.etc:
-        return '기타';
+        return '일반';
     }
   }
 
