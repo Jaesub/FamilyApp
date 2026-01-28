@@ -173,28 +173,89 @@ class _ScheduleCalendarTabState extends State<ScheduleCalendarTab> {
               final it = events[i];
 
               // 리스트 추가
-              return ListTile(
-                title: Text(it.title),
-                subtitle: it.memo == null ? null : Text(it.memo!),
-                onTap: () async {
-                  final changed = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                      builder: (_) => ScheduleEditPage(controller: widget.controller, item: it),
-                    ),
-                  );
-                  if (changed == true) {
-                    widget.onChanged();
-                    setState(() {});
-                  }
-                },
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () {
-                    widget.controller.remove(it.id);
-                    widget.onChanged();
-                    setState(() {});
+              final isImportant = it.category == ScheduleCategory.important;
+
+              return Container(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                decoration: BoxDecoration(
+                  color: isImportant
+                      ? Theme.of(context).colorScheme.primary.withOpacity(0.06) // 중요 강조
+                      : null,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ListTile(
+                  leading: isImportant
+                      ? const Icon(Icons.star_rounded)
+                      : const Icon(Icons.event_note),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          it.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: isImportant
+                                ? FontWeight.w700
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                      if (it.pinned) ...[
+                        const SizedBox(width: 6),
+                        const Icon(Icons.push_pin, size: 18),
+                      ],
+                    ],
+                  ),
+
+                  subtitle: it.memo == null
+                      ? null
+                      : Text(
+                      it.memo!, maxLines: 1, overflow: TextOverflow.ellipsis),
+
+                  // 우측에 "중요/일반" 배지 느낌(텍스트)
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isImportant)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Text('중요',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () {
+                          widget.controller.remove(it.id);
+                          widget.onChanged();
+                          setState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+
+                  onTap: () async {
+                    final changed = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ScheduleEditPage(
+                                controller: widget.controller, item: it),
+                      ),
+                    );
+                    if (changed == true) {
+                      widget.onChanged();
+                      setState(() {});
+                    }
                   },
                 ),
+                // trailing: IconButton(
+                //   icon: const Icon(Icons.delete_outline),
+                //   onPressed: () {
+                //     widget.controller.remove(it.id);
+                //     widget.onChanged();
+                //     setState(() {});
+                //   },
+                // ),
               );
             },
           ),
