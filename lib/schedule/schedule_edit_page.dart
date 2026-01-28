@@ -235,7 +235,7 @@ class _ScheduleEditPageState extends State<ScheduleEditPage> {
                       ),
                       items: const [
                         DropdownMenuItem(value: ScheduleCategory.important, child: Text('중요')),
-                        DropdownMenuItem(value: ScheduleCategory.etc, child: Text('기타')),
+                        DropdownMenuItem(value: ScheduleCategory.etc, child: Text('일반')),
                       ],
                       onChanged: (v) => setState(() => _category = v ?? ScheduleCategory.etc),
                     ),
