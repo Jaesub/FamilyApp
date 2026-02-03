@@ -17,12 +17,14 @@ class _FamilyPageState extends State<FamilyPage> {
   final FamilyController _controller = FamilyController();
   FamilyMember? _selectedMember;
 
+  // 캔버스 크기 (무한 스크롤 느낌을 위해 화면보다 훨씬 크게 설정)
   static const double canvasSize = 4000;
   static const double center = canvasSize / 2;
 
   @override
   void initState() {
     super.initState();
+    // 화면이 처음 그려진 직후, 시점을 중앙(나: 0,0)으로 이동시킴
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _resetView();
     });
@@ -34,6 +36,7 @@ class _FamilyPageState extends State<FamilyPage> {
     super.dispose();
   }
 
+  // 화면 초기화: 캔버스의 중심이 기기 화면의 중심에 오도록 좌표 조정
   void _resetView() {
     final size = MediaQuery.of(context).size;
     final double x = (size.width / 2) - center;
@@ -41,8 +44,63 @@ class _FamilyPageState extends State<FamilyPage> {
     _transformationController.value = Matrix4.identity()..translate(x, y);
   }
 
+  // 화면 갱신 (데이터 변경 시 호출)
   void _refresh() {
     setState(() {});
+  }
+
+  // [NEW] 가족 정보 수정 다이얼로그
+  void _showEditDialog(FamilyMember member) {
+    final nameCtr = TextEditingController(text: member.name);
+    final relationCtr = TextEditingController(text: member.relation);
+    final descCtr = TextEditingController(text: member.description);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("가족 정보 수정"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameCtr, decoration: const InputDecoration(labelText: "이름")),
+                TextField(controller: relationCtr, decoration: const InputDecoration(labelText: "관계")),
+                TextField(controller: descCtr, decoration: const InputDecoration(labelText: "설명")),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("취소")),
+            ElevatedButton(
+              onPressed: () {
+                if (nameCtr.text.isEmpty) return;
+
+                final updatedMember = FamilyMember(
+                  id: member.id,
+                  name: nameCtr.text,
+                  relation: relationCtr.text,
+                  description: descCtr.text,
+                  imageUrl: member.imageUrl,
+                  position: member.position,
+                  childrenIds: member.childrenIds,
+                  spouseId: member.spouseId,
+                );
+
+                _controller.updateMember(updatedMember);
+                setState(() {
+                  _selectedMember = updatedMember;
+                });
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("수정되었습니다!")));
+              },
+              child: const Text("저장"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // 가족 추가 다이얼로그
@@ -51,11 +109,8 @@ class _FamilyPageState extends State<FamilyPage> {
     final relationCtr = TextEditingController();
     final descCtr = TextEditingController();
 
-    // 기본값 설정
     String? selectedRelatedId = _selectedMember?.id;
     String? selectedSpouseId;
-
-    // 추가 모드 (0: 자녀, 1: 부모, 2: 배우자)
     int addMode = 0;
 
     showDialog(
@@ -69,7 +124,6 @@ class _FamilyPageState extends State<FamilyPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 1. 기준 인물이 있을 때: 관계 선택 (3가지 옵션)
                     if (_selectedMember != null)
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
@@ -86,43 +140,57 @@ class _FamilyPageState extends State<FamilyPage> {
                               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo.shade900),
                             ),
                             const SizedBox(height: 10),
-
-                            // [수정됨] 버튼을 Expanded로 감싸서 균등 분할
+                            // 3가지 선택지 균등 분할
                             Row(
                               children: [
                                 Expanded(
                                   child: ChoiceChip(
                                     label: const Center(
-                                        child: Text("자녀로", style: TextStyle(fontSize: 12))
+                                        child: Text("자녀로",
+                                          style: TextStyle(fontSize: 12),
+                                          overflow: TextOverflow.ellipsis,
+                                        )
                                     ),
                                     selected: addMode == 0,
                                     onSelected: (val) => setDialogState(() => addMode = 0),
                                     selectedColor: Colors.blue.shade100,
-                                    showCheckmark: false, // 공간 확보를 위해 체크 표시 숨김
+                                    showCheckmark: false,
+                                    labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                                    visualDensity: VisualDensity.compact,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: ChoiceChip(
                                     label: const Center(
-                                        child: Text("부모로", style: TextStyle(fontSize: 12))
+                                        child: Text("부모로",
+                                          style: TextStyle(fontSize: 12),
+                                          overflow: TextOverflow.ellipsis,
+                                        )
                                     ),
                                     selected: addMode == 1,
                                     onSelected: (val) => setDialogState(() => addMode = 1),
                                     selectedColor: Colors.orange.shade100,
                                     showCheckmark: false,
+                                    labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                                    visualDensity: VisualDensity.compact,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: ChoiceChip(
                                     label: const Center(
-                                        child: Text("배우자로", style: TextStyle(fontSize: 12))
+                                        child: Text("배우자로",
+                                          style: TextStyle(fontSize: 12),
+                                          overflow: TextOverflow.ellipsis,
+                                        )
                                     ),
                                     selected: addMode == 2,
                                     onSelected: (val) => setDialogState(() => addMode = 2),
                                     selectedColor: Colors.pink.shade100,
                                     showCheckmark: false,
+                                    labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                                    visualDensity: VisualDensity.compact,
                                   ),
                                 ),
                               ],
@@ -137,7 +205,6 @@ class _FamilyPageState extends State<FamilyPage> {
 
                     const SizedBox(height: 16),
 
-                    // 기준 인물이 없을 때만 전체 선택 드롭다운 표시
                     if (_selectedMember == null) ...[
                       DropdownButtonFormField<String>(
                         isExpanded: true,
@@ -152,7 +219,6 @@ class _FamilyPageState extends State<FamilyPage> {
                         onChanged: (val) => setDialogState(() => selectedRelatedId = val),
                       ),
                       const SizedBox(height: 16),
-                      // 배우자 별도 선택 (독립 추가 시)
                       DropdownButtonFormField<String>(
                         isExpanded: true,
                         decoration: const InputDecoration(labelText: "배우자 선택", border: OutlineInputBorder()),
@@ -175,21 +241,20 @@ class _FamilyPageState extends State<FamilyPage> {
                   onPressed: () {
                     if (nameCtr.text.isEmpty) return;
 
-                    // 모드에 따른 파라미터 설정
                     String? targetRelatedId = selectedRelatedId;
                     String? targetSpouseId = selectedSpouseId;
                     bool isParentMode = false;
 
                     if (_selectedMember != null) {
-                      if (addMode == 0) { // 자녀로 추가
+                      if (addMode == 0) { // 자녀로
                         targetRelatedId = _selectedMember!.id;
                         isParentMode = false;
-                      } else if (addMode == 1) { // 부모로 추가
+                      } else if (addMode == 1) { // 부모로
                         targetRelatedId = _selectedMember!.id;
                         isParentMode = true;
-                      } else if (addMode == 2) { // 배우자로 추가
-                        targetRelatedId = null; // 부모/자녀 관계 아님
-                        targetSpouseId = _selectedMember!.id; // 배우자로 연결
+                      } else if (addMode == 2) { // 배우자로
+                        targetRelatedId = null;
+                        targetSpouseId = _selectedMember!.id;
                       }
                     }
 
@@ -258,14 +323,18 @@ class _FamilyPageState extends State<FamilyPage> {
                 height: canvasSize,
                 child: Stack(
                   children: [
+                    // 전체화면 크기의 CustomPaint (터치 영역 확보 및 그리기)
                     Positioned.fill(
                       child: CustomPaint(
                         painter: FamilyTreePainter(
                           members: members,
+                          // [중요] 페인터에게 캔버스 중심 오프셋을 전달해야
+                          // 2000,2000 위치에 있는 노드들과 좌표가 일치하게 됩니다.
                           offset: const Offset(center, center),
                         ),
                       ),
                     ),
+                    // 가족 노드들 배치
                     ...members.map((member) {
                       final isSelected = _selectedMember?.id == member.id;
                       return Positioned(
@@ -316,7 +385,7 @@ class _FamilyPageState extends State<FamilyPage> {
             ),
           ),
 
-          // 3. 하단 요약 정보 카드
+          // 3. 하단 요약 카드
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -415,21 +484,25 @@ class _FamilyPageState extends State<FamilyPage> {
               ),
             ),
           ),
-          const Divider(),
-          InkWell(
-            onTap: _deleteSelectedMember,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.delete, color: Colors.red, size: 16),
-                  SizedBox(width: 6),
-                  Text("가족 구성원 삭제", style: TextStyle(color: Colors.red, fontSize: 13)),
-                ],
+          const Divider(height: 1),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: () => _showEditDialog(member),
+                  icon: const Icon(Icons.edit, size: 18, color: Colors.blueAccent),
+                  label: const Text("수정하기", style: TextStyle(color: Colors.blueAccent)),
+                ),
               ),
-            ),
+              Container(width: 1, height: 24, color: Colors.grey.shade300),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: _deleteSelectedMember,
+                  icon: const Icon(Icons.delete, size: 18, color: Colors.redAccent),
+                  label: const Text("삭제하기", style: TextStyle(color: Colors.redAccent)),
+                ),
+              ),
+            ],
           ),
         ],
       ),
