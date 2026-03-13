@@ -1,9 +1,9 @@
 // lib/app.dart
 import 'package:flutter/material.dart';
-import 'home/home_page.dart';
-import 'services/auth_service.dart';
-import 'login/login_page.dart';
-import 'models/user.dart';
+import 'package:fm2025/home/home_page.dart';
+import 'package:fm2025/services/auth_service.dart';
+import 'package:fm2025/login/login_page.dart';
+import 'package:fm2025/models/user.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
