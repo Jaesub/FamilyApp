@@ -26,7 +26,9 @@ class _ScheduleCalendarTabState extends State<ScheduleCalendarTab> {
 
   // 추가: 해당 날짜에 일정이 있는지(점 표시 여부)
   bool _hasEvent(DateTime day) {
-    return widget.controller.eventsOn(day, widget.filter).isNotEmpty;
+    final events = widget.controller.all; // 🔥 전체 이벤트
+
+    return events.any((e) => _isInRange(day, e.start, e.end));
   }
 
   DateTime _firstDayOfMonth(DateTime d) => DateTime(d.year, d.month, 1);
@@ -44,13 +46,109 @@ class _ScheduleCalendarTabState extends State<ScheduleCalendarTab> {
   bool _hasImportantEvent(DateTime day) {
     // final events = widget.controller.eventsOn(day, widget.filter);
     // 필터 무시하고 중요 여부만 확인하는 버전
-    final events = widget.controller.eventsOn(day, ScheduleCategory.all);
+    // final events = widget.controller.eventsOn(day, ScheduleCategory.all);
+    final events = widget.controller.all;
 
     // 필터가 important가 아니더라도,
     // day에 important 일정이 있으면 true로 표시하고 싶으면 아래처럼 하면 됨.
     // (현재 filter가 all/important/etc에 따라 eventsOn 결과가 달라지므로,
     //  "항상 important를 표시"하고 싶으면 filter를 ScheduleCategory.all로 조회해야 함)
-    return events.any((e) => e.category == ScheduleCategory.important);
+    // return events.any((e) => e.category == ScheduleCategory.important);
+    return events.any((e) =>
+    e.category == ScheduleCategory.important &&
+        _isInRange(day, e.start, e.end));
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  bool _isInRange(DateTime day, DateTime start, DateTime? end) {
+    final d = DateTime(day.year, day.month, day.day);
+    final s = DateTime(start.year, start.month, start.day);
+    final e = end != null
+        ? DateTime(end.year, end.month, end.day)
+        : s;
+
+    return !d.isBefore(s) && !d.isAfter(e);
+  }
+
+  bool _isStartDay(DateTime day, ScheduleItem item) {
+    return _isSameDay(day, item.start);
+  }
+
+  // 달력에 리스트 불러와서 뿌리기
+  List<ScheduleItem> _findEventsForDay(DateTime day) {
+    final events = widget.controller.all
+        .where((e) => _isInRange(day, e.start, e.end))
+        .toList();
+
+    // 고정 먼저, 그 다음 중요, 그 다음 시작일 순
+    events.sort((a, b) {
+      final pinnedCompare = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+      if (pinnedCompare != 0) return pinnedCompare;
+
+      final importantCompare =
+          (b.category == ScheduleCategory.important ? 1 : 0) -
+              (a.category == ScheduleCategory.important ? 1 : 0);
+      if (importantCompare != 0) return importantCompare;
+
+      return a.start.compareTo(b.start);
+    });
+
+    return events;
+  }
+
+  bool _isEndDay(DateTime day, ScheduleItem item) {
+    final end = item.end ?? item.start;
+    return _isSameDay(day, end);
+  }
+
+  bool _isSingleDayEvent(ScheduleItem item) {
+    return item.end == null || _isSameDay(item.start, item.end!);
+  }
+
+  Widget _buildEventBar({
+    required DateTime date,
+    required ScheduleItem event,
+    required bool isImportant,
+  }) {
+    final color = isImportant ? Colors.redAccent : Colors.grey;
+
+    if (_isSingleDayEvent(event)) {
+      return Container(
+        margin: const EdgeInsets.only(top: 4),
+        width: 18,
+        height: 4,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(6),
+        ),
+      );
+    }
+
+    final isStart = _isStartDay(date, event);
+    final isEnd = _isEndDay(date, event);
+
+    BorderRadius radius = BorderRadius.zero;
+
+    if (isStart && isEnd) {
+      radius = BorderRadius.circular(6); // 하루짜리
+    } else if (isStart) {
+      radius = const BorderRadius.horizontal(left: Radius.circular(6));
+    } else if (isEnd) {
+      radius = const BorderRadius.horizontal(right: Radius.circular(6));
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 4, left: 0, right: 0),//(top: 4),
+      width: double.infinity,//24,
+      height: 6,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: radius,
+      ),
+    );
   }
 
   @override
@@ -108,7 +206,9 @@ class _ScheduleCalendarTabState extends State<ScheduleCalendarTab> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
-            childAspectRatio: 1.1,
+            childAspectRatio: 0.85,
+            mainAxisSpacing: 0,
+            crossAxisSpacing: 0,
           ),
           itemCount: startWeekday + daysCount,
           itemBuilder: (context, index) {
@@ -122,14 +222,21 @@ class _ScheduleCalendarTabState extends State<ScheduleCalendarTab> {
                     date.month == _selectedDay.month &&
                     date.day == _selectedDay.day;
 
-            final hasEvent = _hasEvent(date);
-            final hasImportant = _hasImportantEvent(date);  // 추가
-            final dotSize = hasImportant ? 7.0 : 6.0;       // 추가
+            // final hasEvent = _hasEvent(date);
+            // final hasImportant = _hasImportantEvent(date);  // 추가
+            // final event = _findEventForDay(date);
+            // final hasEvent = event != null;
+            // final hasImportant = event?.category == ScheduleCategory.important;
+            // final dotSize = hasImportant ? 7.0 : 6.0;       // 추가
+            final dayEvents = _findEventsForDay(date);
+            final hasEvent = dayEvents.isNotEmpty;
+            final visibleEvents = dayEvents.take(2).toList();
+            final hiddenCount = dayEvents.length - visibleEvents.length;
 
             return GestureDetector(
               onTap: () => setState(() => _selectedDay = date),
               child: Container(
-                margin: const EdgeInsets.all(2),
+                margin: EdgeInsets.zero,
                 decoration: BoxDecoration(
                   color: selected
                       ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
@@ -137,22 +244,36 @@ class _ScheduleCalendarTabState extends State<ScheduleCalendarTab> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      '$day',
-                      style: TextStyle(
-                        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '$day',
+                        style: TextStyle(
+                          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
+
                     if (hasEvent)
-                      Container(
-                        width: dotSize,
-                        height: dotSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: hasImportant ? Colors.redAccent : Colors.grey, // 중요=빨강, 일반=회색
+                      ...visibleEvents.map(
+                            (event) => Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: _buildEventBar(
+                            date: date,
+                            event: event,
+                            isImportant: event.category == ScheduleCategory.important,
+                          ),
+                        ),
+                      ),
+
+                    if (hiddenCount > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          '+$hiddenCount',
+                          style: const TextStyle(fontSize: 10),
                         ),
                       ),
                   ],
