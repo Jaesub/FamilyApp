@@ -1,8 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:fm2025/models/user.dart';
+import 'package:fm2025/models/auth_models.dart';
 
 class AuthService {
+  // test 용도 (true : 테스트 , false : 실제서버)
+  static const bool useTest = true;
+
   bool _loggedIn = false;
   User? _currentUser;
   String? _accessToken;
@@ -16,10 +20,62 @@ class AuthService {
   // 웹/윈도우면 localhost 가능
   final String baseUrl = 'http://10.0.2.2:5254';
 
+  Future<void> signup(SignupRequest request) async {
+    // test 모드 사용 여부
+    if (useTest) {
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // 실패 케이스
+      if (request.email == 'dup@test.com') {
+        throw Exception('이미 가입된 이메일입니다.');
+      }
+
+      return;
+    }
+
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/Auth/signup'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(request.toJson()),
+    );
+
+    print("signup statusCode: ${res.statusCode}");
+    print("signup body: ${res.body}");
+
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      try {
+        final json = jsonDecode(res.body);
+        throw Exception(json['message'] ?? '회원가입 실패');
+      } catch (_) {
+        throw Exception('회원가입 실패');
+      }
+    }
+  }
+
   Future<User> login({
     required String email,
     required String password,
   }) async {
+    // test 모드 사용 여부
+    if (useTest) {
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // 실패 케이스
+      if (email == 'fail@test.com') {
+        throw Exception('로그인 실패');
+      }
+
+      _accessToken = 'test-token';
+      _currentUser = User(
+        email: email,
+        displayName: '테스트사용자',
+      );
+      _loggedIn = true;
+      return _currentUser!;
+    }
+
     if (email.isEmpty || password.isEmpty) {
       throw Exception('이메일/비밀번호를 입력하세요.');
     }
@@ -39,7 +95,12 @@ class AuthService {
     print("login body: ${loginRes.body}");
 
     if (loginRes.statusCode != 200) {
-      throw Exception('로그인 실패');
+      try {
+        final json = jsonDecode(loginRes.body) as Map<String, dynamic>;
+        throw Exception(json['message'] ?? '로그인 실패');
+      } catch (_) {
+        throw Exception('로그인 실패');
+      }
     }
 
     final loginJson = jsonDecode(loginRes.body) as Map<String, dynamic>;
@@ -49,32 +110,88 @@ class AuthService {
     //   "Authorization": "Bearer $token"
     // }
 
-    if (token == null || token!.isEmpty) {
+    if (token == null || token.isEmpty) {
       throw Exception('토큰을 받지 못했습니다.');
     }
 
     _accessToken = token;
 
+    final user = await getMe();
+
+    _currentUser = user;
+    _loggedIn = true;
+    return _currentUser!;
+  }
+
+  Future<User> getMe() async {
+    final token = _accessToken;
+    if (token == null || token.isEmpty) {
+      throw Exception('액세스 토큰이 없습니다.');
+    }
+
     final meRes = await http.get(
-      Uri.parse('$baseUrl/api/Auth/me'),
-      headers: {
-        'Authorization': 'Bearer $_accessToken',
-      },
-    );
+        Uri.parse('$baseUrl/api/Auth/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+    print("me statusCode: ${meRes.statusCode}");
+    print("me body: ${meRes.body}");
 
     if (meRes.statusCode != 200) {
       throw Exception('사용자 정보 조회 실패: ${meRes.body}');
     }
 
     final meJson = jsonDecode(meRes.body) as Map<String, dynamic>;
-    final userEmail = meJson['email'] as String? ?? email;
-    final displayName = userEmail.split('@').first;
+    final userEmail = meJson['email'] as String? ?? '';
+    final displayName =
+        (meJson['displayName'] as String?) ??
+        (meJson['name'] as String?) ??
+        (userEmail.isNotEmpty ? userEmail.split('@').first : '사용자');
 
     _currentUser = User(
-      email: userEmail,
-      displayName: displayName,
+        email: userEmail,
+        displayName: displayName,
+        );
+
+    _loggedIn = true;
+    return _currentUser!;
+  }
+
+  Future<User> socialLogin(SocialLoginRequest request) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/Auth/social-login'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(request.toJson()),
     );
 
+    print("social login statusCode: ${res.statusCode}");
+    print("social login body: ${res.body}");
+
+    if (res.statusCode != 200) {
+      try {
+        final json = jsonDecode(res.body);
+        throw Exception(json['message'] ?? '소셜 로그인 실패');
+      } catch (_) {
+        throw Exception('소셜 로그인 실패');
+      }
+    }
+
+    final json = jsonDecode(res.body) as Map<String, dynamic>;
+    final token = json['accessToken'] as String?;
+
+    if (token == null || token.isEmpty) {
+      throw Exception('토큰을 받지 못했습니다.');
+    }
+
+    _accessToken = token;
+
+    final user = await getMe();
+
+    _currentUser = user;
     _loggedIn = true;
     return _currentUser!;
   }

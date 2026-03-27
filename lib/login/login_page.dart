@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../models/user.dart';
+import 'package:fm2025/login/signup_page.dart';
 
 class LoginPage extends StatefulWidget {
   final AuthService auth;
@@ -118,12 +119,12 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return '비밀번호를 입력하세요.';
-                        if (v.length < 4) return '4자 이상 입력하세요.';
+                        if (v.length < 8) return '8자 이상 입력하세요.';
                         return null;
                       },
                       onFieldSubmitted: (_) => _submit(),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
@@ -133,6 +134,32 @@ class _LoginPageState extends State<LoginPage> {
                             width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                             : const Icon(Icons.login),
                         label: Text(_loading ? '로그인 중...' : '로그인'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _loading
+                            ? null
+                            : () async {
+                          final result = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SignupPage(auth: widget.auth),
+                            ),
+                          );
+
+                          if (!mounted) return;
+
+                          if (result == true) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('회원가입이 완료되었습니다. 로그인해주세요.')),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('회원가입'),
                       ),
                     ),
                   ],
