@@ -4,6 +4,7 @@ import 'family_model.dart';
 import 'family_painter.dart';
 import 'family_detail_page.dart';
 import 'family_controller.dart';
+import 'profile_avatar.dart';
 
 class FamilyPage extends StatefulWidget {
   const FamilyPage({super.key});
@@ -424,10 +425,11 @@ class _FamilyPageState extends State<FamilyPage> {
             color: isSelected ? Colors.white : Colors.grey[600],
           )),
           const SizedBox(height: 8),
-          CircleAvatar(
+          ProfileAvatar(
+            iconData: Icons.person,
             radius: 35,
-            backgroundColor: isSelected ? Colors.white.withOpacity(0.3) : Colors.grey.shade100,
-            child: Icon(Icons.person, size: 36, color: isSelected ? Colors.white : Colors.grey),
+            memberId: member.id,
+            isEditable: false,
           ),
           const SizedBox(height: 8),
           Text(member.name, style: TextStyle(
@@ -457,13 +459,11 @@ class _FamilyPageState extends State<FamilyPage> {
               behavior: HitTestBehavior.opaque,
               child: Row(
                 children: [
-                  Container(
-                    width: 80, height: 80,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF0EB),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(Icons.person, size: 40, color: Color(0xFFFF8F5F)),
+                  ProfileAvatar(
+                    iconData: Icons.person,
+                    radius: 40,
+                    memberId: member.id,
+                    isEditable: false,
                   ),
                   const SizedBox(width: 20),
                   Expanded(

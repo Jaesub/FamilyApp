@@ -42,3 +42,12 @@ android {
 flutter {
     source = "../.."
 }
+
+configurations.all {
+    resolutionStrategy {
+        force("androidx.activity:activity:1.9.3")
+        force("androidx.core:core:1.13.1")
+        force("androidx.core:core-ktx:1.13.1")
+        force("androidx.navigationevent:navigationevent-android:1.0.0")
+    }
+}
