@@ -29,6 +29,8 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   intl: ^0.19.0
+  # google 로그인
+  google_sign_in: ^7.2.0
 
 # 나중에 구조 변경 시 사용
   provider: ^6.0.5
@@ -40,13 +42,12 @@ dependencies:
     sdk: flutter
 
 
-
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
-  flutter_native_splash: ^2.4.0
+  flutter_native_splash: ^2.4.1
   flutter_test:
     sdk: flutter
 
@@ -68,6 +69,8 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  assets:
+    - assets/images/splash_character.png
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
@@ -100,9 +103,16 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
 flutter_native_splash:
-  color: "#ffffff"                          # 배경색
-  image: assets/icon/app_icon.png           # 앱 로고
-  branding: assets/icon/branding.png        # 하단 브랜드 이미지
-  android: true
-  ios: true
+  color: "#FF4A3D"
+  image: assets/images/splash_character.png
+
+  android_12:
+    color: "#FF4A3D"
+#    image: assets/images/splash_android12_icon.png
+#    icon_background_color: "#FF4A3D"
+#  color: "#ffffff"                          # 배경색
+#  image: assets/icon/app_icon.png           # 앱 로고
+#  branding: assets/icon/branding.png        # 하단 브랜드 이미지
+#  android: true
+#  ios: true
 
