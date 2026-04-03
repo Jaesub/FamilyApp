@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:fm2025/models/user.dart';
 import 'package:fm2025/models/auth_models.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   // test 용도 (true : 테스트 , false : 실제서버)
-  static const bool useTest = true;
+  static const bool useTest = false;
 
   bool _loggedIn = false;
   User? _currentUser;
@@ -121,6 +122,51 @@ class AuthService {
     _currentUser = user;
     _loggedIn = true;
     return _currentUser!;
+  }
+
+  Future<User> loginWithGoogle() async {
+    if (useTest) {
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      _accessToken = 'mock-google-token';
+      _currentUser = User(
+        email: 'google@test.com',
+        displayName: '구글사용자',
+      );
+      _loggedIn = true;
+
+      return _currentUser!;
+    }
+
+    final GoogleSignIn googleSignIn = GoogleSignIn.instance;
+
+    await googleSignIn.initialize(
+      // 백엔드에서 Google ID 토큰 검증할 거면
+      // Google Cloud Console의 Web client ID를 넣는 게 일반적입니다.
+      // serverClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+    );
+
+    final GoogleSignInAccount account = await googleSignIn.authenticate();
+
+    final auth = account.authentication;
+    final idToken = auth.idToken;
+
+    if (idToken == null || idToken.isEmpty) {
+      throw Exception('Google ID 토큰을 받지 못했습니다.');
+    }
+
+    final user = await socialLogin(
+      SocialLoginRequest(
+        provider: 'google',
+        providerUserId: account.id,
+        email: account.email,
+        name: account.displayName ?? account.email.split('@').first,
+        profileImageUrl: account.photoUrl,
+        idToken: idToken,
+      ),
+    );
+
+    return user;
   }
 
   Future<User> getMe() async {

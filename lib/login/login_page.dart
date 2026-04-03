@@ -143,6 +143,37 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: _loading
                             ? null
                             : () async {
+                          setState(() => _loading = true);
+
+                          try {
+                            final User user = await widget.auth.loginWithGoogle();
+
+                            if (!mounted) return;
+                            Navigator.pop(context, user);
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  e.toString().replaceFirst('Exception: ', ''),
+                                ),
+                              ),
+                            );
+                          } finally {
+                            if (mounted) setState(() => _loading = false);
+                          }
+                        },
+                        icon: const Icon(Icons.g_mobiledata),
+                        label: const Text('Google로 로그인'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _loading
+                            ? null
+                            : () async {
                           final result = await Navigator.push<bool>(
                             context,
                             MaterialPageRoute(

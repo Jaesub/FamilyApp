@@ -4,6 +4,7 @@ import 'package:fm2025/home/home_page.dart';
 import 'package:fm2025/services/auth_service.dart';
 import 'package:fm2025/login/login_page.dart';
 import 'package:fm2025/models/user.dart';
+import 'package:fm2025/splash/splash_page.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -38,12 +39,13 @@ class _MyAppState extends State<MyApp> {
       theme: _isDarkMode
           ? ThemeData.dark()
           : ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo)),
-      home: HomePage(
+      home: SplashPage(
+        auth: _auth,
         isDarkMode: _isDarkMode,
         onToggleDarkMode: () => setState(() => _isDarkMode = !_isDarkMode),
         onLogout: _logout,                               // 로그아웃 시 상태만 갱신
         onLoginRequested: (ctx) => _startLoginFlow(ctx), // 로그인 요청 → 모달
-        user: _auth.currentUser,                         // Drawer에 표시할 유저
+        // user: _auth.currentUser,                         // Drawer에 표시할 유저
       ),
     );
   }

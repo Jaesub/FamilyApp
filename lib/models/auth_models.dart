@@ -41,6 +41,10 @@ class SocialLoginRequest {
   final String email;
   final String name;
   final String? profileImageUrl;
+  final String? idToken;
+  final String? accessToken;
+  final String? authorizationCode;
+
 
   SocialLoginRequest({
     required this.provider,
@@ -48,17 +52,21 @@ class SocialLoginRequest {
     required this.email,
     required this.name,
     this.profileImageUrl,
+    this.idToken,
+    this.accessToken,
+    this.authorizationCode,
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'provider': provider,
-      'providerUserId': providerUserId,
-      'email': email,
-      'name': name,
-      'profileImageUrl': profileImageUrl,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'provider': provider,
+    'providerUserId': providerUserId,
+    'email': email,
+    'name': name,
+    'profileImageUrl': profileImageUrl,
+    'idToken': idToken,
+    'accessToken': accessToken,
+    'authorizationCode': authorizationCode,
+  };
 }
 
 class AuthResponse {
