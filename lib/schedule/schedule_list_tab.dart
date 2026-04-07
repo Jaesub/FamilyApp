@@ -6,31 +6,29 @@ import 'schedule_edit_page.dart';
 
 class ScheduleListTab extends StatelessWidget {
   final ScheduleController controller;
-  final ScheduleCategory filter;
   final VoidCallback onChanged;
 
 
   const ScheduleListTab({
     super.key,
     required this.controller,
-    required this.filter,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final items = controller.filtered(filter).toList()
+    final items = controller.all.toList()
       ..sort((a, b) {
         // pinned 우선, 그 다음 날짜 오름차순
         final p = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
         if (p != 0) return p;
-        return a.start.compareTo(b.start);
+        return a.startDateTime.compareTo(b.startDateTime);
       });
 
     // 월별 그룹핑
     final Map<String, List<ScheduleItem>> grouped = {};
     for (final it in items) {
-      final key = DateFormat('yyyy.MM').format(it.start);
+      final key = DateFormat('yyyy.MM').format(it.startDateTime);
       grouped.putIfAbsent(key, () => []).add(it);
     }
 
@@ -38,7 +36,7 @@ class ScheduleListTab extends StatelessWidget {
       return const Center(child: Text('일정이 없습니다.'));
     }
 
-    final _dateFmt = DateFormat('yyyy.mm.dd');
+    final _dateFmt = DateFormat('yyyy.MM.dd');
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
@@ -88,12 +86,13 @@ class _ScheduleCard extends StatelessWidget {
     final dateFmt = DateFormat('yyyy.MM.dd');
 
     // 오른쪽 날짜 문자열: 단일/기간
-    final dateText = item.end == null
-        ? dateFmt.format(item.start)
-        : '${dateFmt.format(item.start)} - ${dateFmt.format(item.end!)}';
+    final dateText = item.isMultiDay
+        ? '${dateFmt.format(item.startDateTime)} - ${dateFmt.format(item.endDateTime)}'
+        : dateFmt.format(item.startDateTime);
 
     // 중요 여부
-    final isImportant = item.category == ScheduleCategory.important;
+    final isImportant = item.isImportant;
+    final barColor = Color(item.colorValue);
 
     // 이전버전
     // return Card(
@@ -125,14 +124,14 @@ class _ScheduleCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ✅ 왼쪽: 중요 표시 아이콘(중요일 때만)
-              if (isImportant)
-                const Padding(
-                  padding: EdgeInsets.only(top: 2, right: 10),
-                  child: Icon(Icons.star_rounded, size: 20),
-                )
-              else
-                const SizedBox(width: 30), // 아이콘 자리 고정으로 정렬 유지
+              Padding(
+                padding: const EdgeInsets.only(top: 2, right: 10),
+                child: Icon(
+                  isImportant ? Icons.star_rounded : Icons.event_note,
+                  size: 20,
+                  color: barColor,
+                ),
+              ),
 
               // ✅ 가운데: 제목/메모
               Expanded(

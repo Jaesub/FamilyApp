@@ -27,13 +27,34 @@ class _ScheduleEditPageState extends State<ScheduleEditPage> {
   late final TextEditingController _titleCtr;
   late final TextEditingController _memoCtr;
 
-  late DateTime _start;
-  DateTime? _end;
+  late DateTime _startDate;
+  late DateTime _endDate;
 
-  ScheduleCategory _category = ScheduleCategory.etc;
+  TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _endTime = const TimeOfDay(hour: 10, minute: 0);
+
   bool _pinned = false;
+  bool _isImportant = false;
+  bool _allDay = true;
+  late int _colorValue;
+
+  final List<Color> _presetColors = [
+    Colors.grey,
+    Colors.redAccent,
+    Colors.orange,
+    Colors.green,
+    Colors.blueAccent,
+    Colors.purple,
+    Colors.teal,
+  ];
 
   bool get _isEdit => widget.item != null;
+
+  bool get _isMultiDay {
+    return _startDate.year != _endDate.year ||
+        _startDate.month != _endDate.month ||
+        _startDate.day != _endDate.day;
+  }
 
   @override
   void initState() {
@@ -43,12 +64,23 @@ class _ScheduleEditPageState extends State<ScheduleEditPage> {
     _titleCtr = TextEditingController(text: it?.title ?? '');
     _memoCtr = TextEditingController(text: it?.memo ?? '');
 
-    final day = widget.initialDay ?? DateTime.now();
-    _start = it?.start ?? DateTime(day.year, day.month, day.day);
-    _end = it?.end;
+    final baseDay = widget.initialDay ?? DateTime.now();
 
-    _category = it?.category ?? ScheduleCategory.etc;
+    final start = it?.startDateTime ??
+        DateTime(baseDay.year, baseDay.month, baseDay.day, 0, 0);
+    final end = it?.endDateTime ??
+        DateTime(baseDay.year, baseDay.month, baseDay.day, 23, 59, 59);
+
+    _startDate = DateTime(start.year, start.month, start.day);
+    _endDate = DateTime(end.year, end.month, end.day);
+
+    _startTime = TimeOfDay(hour: start.hour, minute: start.minute);
+    _endTime = TimeOfDay(hour: end.hour, minute: end.minute);
+
     _pinned = it?.pinned ?? false;
+    _isImportant = it?.isImportant ?? false;
+    _allDay = it?.allDay ?? true;
+    _colorValue = it?.colorValue ?? Colors.grey.value;
   }
 
   @override
@@ -61,41 +93,81 @@ class _ScheduleEditPageState extends State<ScheduleEditPage> {
   DateTime _normalize(DateTime d) => DateTime(d.year, d.month, d.day);
 
   String _two(int n) => n.toString().padLeft(2, '0');
-  String _fmt(DateTime d) => '${d.year}.${_two(d.month)}.${_two(d.day)}';
+  String _fmtDate(DateTime d) => '${d.year}.${_two(d.month)}.${_two(d.day)}';
+  String _fmtTime(TimeOfDay t) =>
+      '${_two(t.hour)}:${_two(t.minute)}';
 
-  Future<void> _pickStart() async {
+  Future<void> _pickStartDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _start,
+      initialDate: _startDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
     if (picked == null) return;
     setState(() {
-      _start = _normalize(picked);
+      _startDate = _normalize(picked);
 
       // 종료일이 시작일보다 이전이면 종료일 제거
-      if (_end != null && _end!.isBefore(_start)) {
-        _end = null;
+      if (_endDate.isBefore(_startDate)) {
+        _endDate = _startDate;
       }
     });
   }
 
-  Future<void> _pickEnd() async {
-    final initial = _end ?? _start;
+  Future<void> _pickEndDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: initial,
-      firstDate: _start, // ✅ 종료일은 시작일 이후만 허용
+      initialDate: _endDate,
+      firstDate: _startDate,
       lastDate: DateTime(2100),
     );
     if (picked == null) return;
+
     setState(() {
-      _end = _normalize(picked);
+      _endDate = _normalize(picked);
     });
   }
 
-  void _clearEnd() => setState(() => _end = null);
+  Future<void> _pickStartTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _startTime,
+    );
+    if (picked == null) return;
+
+    setState(() {
+      _startTime = picked;
+    });
+  }
+
+  Future<void> _pickEndTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _endTime,
+    );
+    if (picked == null) return;
+
+    setState(() {
+      _endTime = picked;
+    });
+  }
+
+  void _setSingleDay() {
+    setState(() {
+      _endDate = _startDate;
+    });
+  }
+
+  DateTime _combineDateAndTime(DateTime date, TimeOfDay time) {
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+  }
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
@@ -103,24 +175,39 @@ class _ScheduleEditPageState extends State<ScheduleEditPage> {
     final title = _titleCtr.text.trim();
     final memo = _memoCtr.text;
 
+    late final DateTime finalStart;
+    late final DateTime finalEnd;
+
+    if (_allDay) {
+      finalStart = DateTime(_startDate.year, _startDate.month, _startDate.day, 0, 0, 0);
+      finalEnd = DateTime(_endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
+    } else {
+      finalStart = _combineDateAndTime(_startDate, _startTime);
+      finalEnd = _combineDateAndTime(_endDate, _endTime);
+    }
+
     if (_isEdit) {
       widget.controller.update(
         id: widget.item!.id,
         title: title,
         memo: memo,
-        start: _start,
-        end: _end,
-        category: _category,
+        start: finalStart,
+        end: finalEnd,
         pinned: _pinned,
+        isImportant: _isImportant,
+        allDay: _allDay,
+        colorValue: _colorValue,
       );
     } else {
       widget.controller.add(
         title: title,
         memo: memo,
-        start: _start,
-        end: _end,
-        category: _category,
+        start: finalStart,
+        end: finalEnd,
         pinned: _pinned,
+        isImportant: _isImportant,
+        allDay: _allDay,
+        colorValue: _colorValue,
       );
     }
 
@@ -158,7 +245,8 @@ class _ScheduleEditPageState extends State<ScheduleEditPage> {
                     ],
                   ),
                 );
-                if (ok == true && mounted) _delete();
+                if (ok == true && mounted)
+                  _delete();
               },
             ),
         ],
@@ -180,7 +268,8 @@ class _ScheduleEditPageState extends State<ScheduleEditPage> {
                         prefixIcon: Icon(Icons.title),
                       ),
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) return '제목을 입력하세요.';
+                        if (v == null || v.trim().isEmpty)
+                          return '제목을 입력하세요.';
                         return null;
                       },
                     ),
@@ -196,48 +285,119 @@ class _ScheduleEditPageState extends State<ScheduleEditPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // 날짜 선택 영역
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('중요일정'),
+                      subtitle: const Text('달력에서 강조 표시됩니다.'),
+                      value: _isImportant,
+                      onChanged: (v) => setState(() => _isImportant = v),
+                    ),
+
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('종일'),
+                      subtitle: const Text('종일 일정이면 시간을 입력하지 않습니다.'),
+                      value: _allDay,
+                      onChanged: (v) {
+                        setState(() {
+                          _allDay = v;
+                        });
+                      },
+                    ),
+
+                    const Divider(height: 24),
+
                     Row(
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: _pickStart,
+                            onPressed: _pickStartDate,
                             icon: const Icon(Icons.event),
-                            label: Text('시작: ${_fmt(_start)}'),
+                            label: Text('시작: ${_fmtDate(_startDate)}'),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: _pickEnd,
+                            onPressed: _pickEndDate,
                             icon: const Icon(Icons.event_available),
-                            label: Text(_end == null ? '종료: 없음' : '종료: ${_fmt(_end!)}'),
+                            label: Text('종료: ${_fmtDate(_endDate)}'),
                           ),
                         ),
                       ],
                     ),
+
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: _end == null ? null : _clearEnd,
-                        child: const Text('종료일 제거'),
+                        onPressed: _isMultiDay ? _setSingleDay : null,
+                        child: const Text('하루 일정으로 맞추기'),
                       ),
                     ),
 
+                    if (!_allDay) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _pickStartTime,
+                              icon: const Icon(Icons.schedule),
+                              label: Text('시작시간: ${_fmtTime(_startTime)}'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _pickEndTime,
+                              icon: const Icon(Icons.schedule_send),
+                              label: Text('종료시간: ${_fmtTime(_endTime)}'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 8),
                     const Divider(height: 24),
 
-                    // 카테고리(전체는 저장용이 아니니 제외)
-                    DropdownButtonFormField<ScheduleCategory>(
-                      value: _category == ScheduleCategory.all ? ScheduleCategory.etc : _category,
-                      decoration: const InputDecoration(
-                        labelText: '분류',
-                        prefixIcon: Icon(Icons.category),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '바 색상',
+                        style: Theme.of(context).textTheme.titleSmall,
                       ),
-                      items: const [
-                        DropdownMenuItem(value: ScheduleCategory.important, child: Text('중요')),
-                        DropdownMenuItem(value: ScheduleCategory.etc, child: Text('일반')),
-                      ],
-                      onChanged: (v) => setState(() => _category = v ?? ScheduleCategory.etc),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _presetColors.map((color) {
+                        final selected = _colorValue == color.value;
+
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _colorValue = color.value;
+                            });
+                          },
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: color,
+                              border: Border.all(
+                                color: selected ? Colors.black : Colors.transparent,
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: selected
+                                ? const Icon(Icons.check, color: Colors.white, size: 18)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
                     ),
 
                     const SizedBox(height: 12),

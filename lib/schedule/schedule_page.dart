@@ -18,30 +18,16 @@ class SchedulePage extends StatefulWidget {
 class _SchedulePageState extends State<SchedulePage> with TickerProviderStateMixin {
   late final TabController _tabController;
 
-  // 현재 선택된 필터(전체/중요/기타)
-  ScheduleCategory _filter = ScheduleCategory.all;
-
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: 1);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  String _label(ScheduleCategory c) {
-    switch (c) {
-      case ScheduleCategory.all:
-        return '전체';
-      case ScheduleCategory.important:
-        return '중요';
-      case ScheduleCategory.etc:
-        return '일반';
-    }
   }
 
   @override
@@ -71,21 +57,6 @@ class _SchedulePageState extends State<SchedulePage> with TickerProviderStateMix
       // 상단 필터 + TabBarView
       body: Column(
         children: [
-          // 필터 칩(전체/중요/기타)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Wrap(
-              spacing: 8,
-              children: [
-                for (final c in ScheduleCategory.values)
-                  ChoiceChip(
-                    label: Text(_label(c)),
-                    selected: _filter == c,
-                    onSelected: (_) => setState(() => _filter = c),
-                  ),
-              ],
-            ),
-          ),
 
           const Divider(height: 1),
 
@@ -95,12 +66,10 @@ class _SchedulePageState extends State<SchedulePage> with TickerProviderStateMix
               children: [
                 ScheduleListTab(
                   controller: ctrl,
-                  filter: _filter,
-                  onChanged: () => setState(() {}),   // 삭제/추가 후 화면 갱신
+                  onChanged: () => setState(() {}),
                 ),
                 ScheduleCalendarTab(
                   controller: ctrl,
-                  filter: _filter,
                   onChanged: () => setState(() {}),
                 ),
               ],
