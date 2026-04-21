@@ -29,6 +29,7 @@ class _AiChatPageState extends State<AiChatPage> {
     final apiModel = dotenv.env['GEMINI_MODEL'];
 
     if (apiKey == null) {
+      debugPrint('🚨 [오류] .env 파일에서 GEMINI_API_KEY를 찾을 수 없습니다.');
       setState(() {
         _messages.add({'role': 'model', 'text': 'API 키를 찾을 수 없습니다. .env 파일을 확인해주세요.'});
         _isLoading = false;
@@ -37,6 +38,7 @@ class _AiChatPageState extends State<AiChatPage> {
     }
 
     if (apiModel == null) {
+      debugPrint('🚨 [오류] .env 파일에서 GEMINI_MODEL을 찾을 수 없습니다.');
       setState(() {
         _messages.add({'role': 'model', 'text': 'API Model을 찾을 수 없습니다. .env 파일을 확인해주세요.'});
         _isLoading = false;
@@ -45,6 +47,7 @@ class _AiChatPageState extends State<AiChatPage> {
     }
 
     try {
+      debugPrint('🚀 [요청] Gemini API 호출 시작 - 모델: $apiModel');
       final model = GenerativeModel(
         model: apiModel,
         apiKey: apiKey,
@@ -53,11 +56,17 @@ class _AiChatPageState extends State<AiChatPage> {
       final content = [Content.text(text)];
       final response = await model.generateContent(content);
 
+      debugPrint('✅ [성공] Gemini API 응답 완료');
+
       setState(() {
         _messages.add({'role': 'model', 'text': response.text ?? '응답을 받을 수 없습니다.'});
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // 🔥 에러 로깅 추가: 에러 객체와 스택 트레이스를 모두 출력합니다.
+      debugPrint('🔥 [예외 발생] Gemini API 호출 중 에러: $e');
+      debugPrint('🔥 [스택 트레이스]: $stackTrace');
+
       setState(() {
         _messages.add({'role': 'model', 'text': '오류가 발생했습니다. API 키나 네트워크 상태를 확인해주세요!'});
         _isLoading = false;
