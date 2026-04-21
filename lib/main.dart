@@ -2,8 +2,19 @@ import 'package:flutter/material.dart';
 import 'splash/splash_page.dart';
 import 'home/home_page.dart';
 import 'models/user.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'app.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Api key Load
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("❌ .env 파일을 찾을 수 없습니다: $e");
+  }
+
   runApp(const MyApp());
 }
 
