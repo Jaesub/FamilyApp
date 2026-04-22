@@ -49,7 +49,7 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return BoardPage(controller: _boardController);
       case 2:
-        return const FamilyPage();
+        return FamilyPage();
       case 3:
         return SchedulePage(controller: _scheduleController);
       default:
