@@ -288,7 +288,7 @@ class _ScheduleEditPageState extends State<ScheduleEditPage> {
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('중요일정'),
-                      subtitle: const Text('달력에서 강조 표시됩니다.'),
+                      subtitle: const Text('리스트에서 강조 표시됩니다.'),
                       value: _isImportant,
                       onChanged: (v) => setState(() => _isImportant = v),
                     ),
