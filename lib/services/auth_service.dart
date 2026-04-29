@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:fm2025/models/user.dart';
 import 'package:fm2025/models/auth_models.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 
 class AuthService {
   // test 용도 (true : 테스트 , false : 실제서버)
@@ -167,6 +168,52 @@ class AuthService {
     );
 
     return user;
+  }
+
+  Future<User> loginWithKakao() async {
+    if (useTest) {
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      _accessToken = 'mock-kakao-token';
+      _currentUser = User(
+        email: 'kakao@test.com',
+        displayName: '카카오사용자',
+      );
+      _loggedIn = true;
+
+      return _currentUser!;
+    }
+
+    kakao.OAuthToken token;
+
+    try {
+      if (await kakao.isKakaoTalkInstalled()) {
+        try {
+          token = await kakao.UserApi.instance.loginWithKakaoTalk();
+        } catch (_) {
+          token = await kakao.UserApi.instance.loginWithKakaoAccount();
+        }
+      } else {
+        token = await kakao.UserApi.instance.loginWithKakaoAccount();
+      }
+
+      final kakaoUser = await kakao.UserApi.instance.me();
+
+      final email = kakaoUser.kakaoAccount?.email ?? '';
+      final nickname =
+          kakaoUser.kakaoAccount?.profile?.nickname ?? '카카오사용자';
+
+      _accessToken = token.accessToken;
+      _currentUser = User(
+        email: email,
+        displayName: nickname,
+      );
+      _loggedIn = true;
+
+      return _currentUser!;
+    } catch (e) {
+      throw Exception('카카오 로그인 실패: $e');
+    }
   }
 
   Future<User> getMe() async {

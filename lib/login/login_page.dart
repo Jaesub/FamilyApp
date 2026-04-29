@@ -174,6 +174,37 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: _loading
                             ? null
                             : () async {
+                          setState(() => _loading = true);
+
+                          try {
+                            final user = await widget.auth.loginWithKakao();
+
+                            if (!mounted) return;
+                            Navigator.pop(context, user);
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  e.toString().replaceFirst('Exception: ', ''),
+                                ),
+                              ),
+                            );
+                          } finally {
+                            if (mounted) setState(() => _loading = false);
+                          }
+                        },
+                        icon: const Icon(Icons.chat_bubble),
+                        label: const Text('카카오로 로그인'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _loading
+                            ? null
+                            : () async {
                           final result = await Navigator.push<bool>(
                             context,
                             MaterialPageRoute(
