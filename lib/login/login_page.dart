@@ -1,233 +1,255 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../models/user.dart';
+import 'package:fm2025/services/auth_service.dart';
+import 'package:fm2025/models/user.dart';
 import 'package:fm2025/login/signup_page.dart';
+import 'package:fm2025/login/email_login_page.dart';
 
 class LoginPage extends StatefulWidget {
   final AuthService auth;
-  // final VoidCallback onLoggedIn;
 
-  const LoginPage({super.key, required this.auth});//, required this.onLoggedIn});
+  const LoginPage({super.key, required this.auth});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailCtr = TextEditingController();
-  final _pwCtr = TextEditingController();
-  bool _obscure = true;
   bool _loading = false;
 
-  @override
-  void dispose() {
-    _emailCtr.dispose();
-    _pwCtr.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _socialLogin(Future<User> Function() login) async {
     setState(() => _loading = true);
-    try {
-      // await widget.auth.login(email: _emailCtr.text.trim(), password: _pwCtr.text);
-      // widget.onLoggedIn();
-      /// 로그인 수행 → AuthService가 User 반환
-      final User user = await widget.auth.login(
-        email: _emailCtr.text.trim(),
-        password: _pwCtr.text,
-      );
-      /// 로그인 성공 → 현재 페이지 pop 하면서 User 반환
-      if (!mounted) return;
-      // Navigator.of(context).pop<User>(user); // 성공 시 User 반환
-      Navigator.pop(context, user);
 
+    try {
+      final user = await login();
+
+      if (!mounted) return;
+      Navigator.pop(context, user);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+        ),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  // void _goEmailLogin() {
+  //   // 지금은 기존 이메일 로그인 UI를 따로 분리하지 않았으므로 임시 처리
+  //   // 나중에 EmailLoginPage로 분리하면 여기서 push 하면 됩니다.
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     const SnackBar(content: Text('이메일 로그인 화면은 다음 단계에서 분리합니다.')),
+  //   );
+  // }
+
+  Future<void> _goEmailLogin() async {
+    final user = await Navigator.of(context).push<User>(
+      MaterialPageRoute(
+        builder: (_) => EmailLoginPage(auth: widget.auth),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (user != null) {
+      Navigator.pop(context, user);
+    }
+  }
+
+  Future<void> _goSignup() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SignupPage(auth: widget.auth),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (result == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('회원가입이 완료되었습니다. 로그인해주세요.')),
+      );
+    }
+  }
+
+  Widget _socialButton({
+    required String text,
+    required Color backgroundColor,
+    required Color textColor,
+    IconData? icon,
+    String? iconText,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 58,
+      child: ElevatedButton(
+        onPressed: _loading ? null : onTap,
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: backgroundColor,
+          foregroundColor: textColor,
+          disabledBackgroundColor: backgroundColor.withOpacity(0.6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 26),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: icon != null
+                  ? Icon(icon, color: textColor, size: 28)
+                  : Text(
+                iconText ?? '',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Text(
+              text,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      backgroundColor: const Color(0xFFFAF9FC),
       appBar: AppBar(
-        // backgroundColor: Colors.transparent,
-        // elevation: 0,
-        // title: const Text(''),
+        backgroundColor: const Color(0xFFFAF9FC),
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             final nav = Navigator.of(context);
-            if(nav.canPop()) {
-              nav.pop();
-            }
-          }
+            if (nav.canPop()) nav.pop();
+          },
         ),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Card(
-            elevation: 4,
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('로그인', style: theme.textTheme.headlineSmall),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailCtr,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: '이메일',
-                        prefixIcon: Icon(Icons.email),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return '이메일을 입력하세요.';
-                        // if (!v.contains('@')) return '올바른 이메일을 입력하세요.';
-                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) return '올바른 이메일을 입력하세요.';
-                        return null;
-                      },
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            children: [
+              const Spacer(flex: 2),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    '뭐부',
+                    style: TextStyle(
+                      fontSize: 44,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -2,
                     ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _pwCtr,
-                      obscureText: _obscure,
-                      keyboardType: TextInputType.visiblePassword,
-                      enableSuggestions: false,
-                      autocorrect: false,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.password],
-                      decoration: InputDecoration(
-                        labelText: '비밀번호',
-                        prefixIcon: const Icon(Icons.lock),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                        ),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return '비밀번호를 입력하세요.';
-                        if (v.length < 8) return '8자 이상 입력하세요.';
-                        return null;
-                      },
-                      onFieldSubmitted: (_) => _submit(),
+                  ),
+                  const SizedBox(width: 16),
+                  Image.asset(
+                    'assets/images/splash_character.png',
+                    width: 108,
+                  ),
+                  const SizedBox(width: 16),
+                  const Text(
+                    '뭐라\n부르지?',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      height: 1.15,
+                      letterSpacing: -1.5,
                     ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _loading ? null : _submit,
-                        icon: _loading
-                            ? const SizedBox(
-                            width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.login),
-                        label: Text(_loading ? '로그인 중...' : '로그인'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _loading
-                            ? null
-                            : () async {
-                          setState(() => _loading = true);
+                  ),
+                ],
+              ),
 
-                          try {
-                            final User user = await widget.auth.loginWithGoogle();
+              const Spacer(flex: 3),
 
-                            if (!mounted) return;
-                            Navigator.pop(context, user);
-                          } catch (e) {
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  e.toString().replaceFirst('Exception: ', ''),
-                                ),
-                              ),
-                            );
-                          } finally {
-                            if (mounted) setState(() => _loading = false);
-                          }
-                        },
-                        icon: const Icon(Icons.g_mobiledata),
-                        label: const Text('Google로 로그인'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _loading
-                            ? null
-                            : () async {
-                          setState(() => _loading = true);
+              _socialButton(
+                text: 'Google',
+                backgroundColor: const Color(0xFFF2F2F2),
+                textColor: const Color(0xFF555555),
+                iconText: 'G',
+                onTap: () => _socialLogin(widget.auth.loginWithGoogle),
+              ),
+              const SizedBox(height: 14),
 
-                          try {
-                            final user = await widget.auth.loginWithKakao();
+              _socialButton(
+                text: '카카오톡',
+                backgroundColor: const Color(0xFFFEE500),
+                textColor: Colors.black,
+                icon: Icons.chat_bubble,
+                onTap: () => _socialLogin(widget.auth.loginWithKakao),
+              ),
+              const SizedBox(height: 14),
 
-                            if (!mounted) return;
-                            Navigator.pop(context, user);
-                          } catch (e) {
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  e.toString().replaceFirst('Exception: ', ''),
-                                ),
-                              ),
-                            );
-                          } finally {
-                            if (mounted) setState(() => _loading = false);
-                          }
-                        },
-                        icon: const Icon(Icons.chat_bubble),
-                        label: const Text('카카오로 로그인'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _loading
-                            ? null
-                            : () async {
-                          final result = await Navigator.push<bool>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SignupPage(auth: widget.auth),
-                            ),
-                          );
+              _socialButton(
+                text: '네이버',
+                backgroundColor: const Color(0xFF03C75A),
+                textColor: Colors.white,
+                iconText: 'N',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('네이버 로그인은 다음 단계에서 연결합니다.')),
+                  );
+                },
+              ),
+              const SizedBox(height: 14),
 
-                          if (!mounted) return;
+              _socialButton(
+                text: 'Apple',
+                backgroundColor: Colors.black,
+                textColor: Colors.white,
+                icon: Icons.apple,
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Apple 로그인은 다음 단계에서 연결합니다.')),
+                  );
+                },
+              ),
 
-                          if (result == true) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('회원가입이 완료되었습니다. 로그인해주세요.')),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.person_add),
-                        label: const Text('회원가입'),
-                      ),
-                    ),
-                  ],
+              const Spacer(flex: 2),
+
+              TextButton(
+                onPressed: _loading ? null : _goEmailLogin,
+                child: const Text(
+                  '이메일로 로그인',
+                  style: TextStyle(
+                    color: Colors.black38,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-            ),
+
+              TextButton(
+                onPressed: _loading ? null : _goSignup,
+                child: const Text(
+                  '회원가입',
+                  style: TextStyle(
+                    color: Colors.black38,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+            ],
           ),
         ),
       ),
