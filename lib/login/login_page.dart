@@ -203,11 +203,7 @@ class _LoginPageState extends State<LoginPage> {
                 backgroundColor: const Color(0xFF03C75A),
                 textColor: Colors.white,
                 iconText: 'N',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('네이버 로그인은 다음 단계에서 연결합니다.')),
-                  );
-                },
+                onTap: () => _socialLogin(widget.auth.loginWithNaver),
               ),
               const SizedBox(height: 14),
 

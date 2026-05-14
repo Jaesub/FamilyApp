@@ -33,6 +33,8 @@ dependencies:
   google_sign_in: ^7.2.0
   # 카카오 로그인
   kakao_flutter_sdk_user: ^1.10.0
+  # 네이버 로그인
+  flutter_naver_login: ^1.8.0
 
 # 나중에 구조 변경 시 사용
   provider: ^6.0.5

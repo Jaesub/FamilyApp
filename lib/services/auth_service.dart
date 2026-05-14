@@ -4,10 +4,11 @@ import 'package:fm2025/models/user.dart';
 import 'package:fm2025/models/auth_models.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
+import 'package:flutter_naver_login/flutter_naver_login.dart';
 
 class AuthService {
   // test 용도 (true : 테스트 , false : 실제서버)
-  static const bool useTest = false;
+  static const bool useTest = true;
 
   bool _loggedIn = false;
   User? _currentUser;
@@ -213,6 +214,43 @@ class AuthService {
       return _currentUser!;
     } catch (e) {
       throw Exception('카카오 로그인 실패: $e');
+    }
+  }
+
+  Future<User> loginWithNaver() async {
+    if (useTest) {
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      _accessToken = 'mock-naver-token';
+      _currentUser = User(
+        email: 'naver@test.com',
+        displayName: '네이버사용자',
+      );
+      _loggedIn = true;
+
+      return _currentUser!;
+    }
+
+    try {
+      final NaverLoginResult result = await FlutterNaverLogin.logIn();
+
+      if (result.status != NaverLoginStatus.loggedIn) {
+        throw Exception('네이버 로그인 취소 또는 실패');
+      }
+
+      final account = result.account;
+      final accessToken = result.accessToken.accessToken;
+
+      _accessToken = accessToken;
+      _currentUser = User(
+        email: account.email,
+        displayName: account.nickname.isNotEmpty ? account.nickname : account.name,
+      );
+      _loggedIn = true;
+
+      return _currentUser!;
+    } catch (e) {
+      throw Exception('네이버 로그인 실패: $e');
     }
   }
 
