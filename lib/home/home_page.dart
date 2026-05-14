@@ -5,14 +5,14 @@ import '../family/family_page.dart';
 import '../models/user.dart';
 import '../schedule/schedule_page.dart';
 import '../schedule/schedule_controller.dart';
+import '../ai/ai_chat_page.dart'; // 🚀 AI 페이지 임포트
 
 class HomePage extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onToggleDarkMode;
-  //final VoidCallback onLogout;
   final Future<void> Function() onLogout;
-  final Future<void> Function(BuildContext) onLoginRequested; // 로그인 요청 콜백
-  final User? user; // 현재 로그인 사용자
+  final Future<void> Function(BuildContext) onLoginRequested;
+  final User? user;
 
   const HomePage({
     super.key,
@@ -30,18 +30,19 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  // 게시판 컨트롤러를 HomePage에서 관리 (한번만 생성)
   final BoardController _boardController = BoardController();
-  // 스케줄 컨트롤러
   final ScheduleController _scheduleController = ScheduleController();
 
   void _onSelectMenu(int index) {
+    // Drawer에서 호출될 때는 pop을 하지만, BottomNavigationBar에서는 안 하므로 구분 필요
+    // 여기서는 Drawer에서만 호출된다고 가정하고 pop을 유지합니다.
     Navigator.pop(context);
     setState(() {
       _selectedIndex = index;
     });
   }
 
+  // 🚀 화면 5개 연결 (홈, 게시판, AI, 가계도, 일정)
   Widget _getPage() {
     switch (_selectedIndex) {
       case 0:
@@ -49,9 +50,11 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return BoardPage(controller: _boardController);
       case 2:
-        return FamilyPage();
+        return const AiChatPage(); // 🚀 AI 화면을 2번 인덱스로 할당
       case 3:
-        return SchedulePage(controller: _scheduleController);
+        return const FamilyPage(); // 가계도
+      case 4:
+        return SchedulePage(controller: _scheduleController); // 일정
       default:
         return const Center(child: Text("알 수 없는 화면"));
     }
@@ -59,17 +62,14 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool loggedIn = widget.user != null; // 로그인 여부
+    final bool loggedIn = widget.user != null;
+
     return Scaffold(
       appBar: AppBar(title: const Text("가족사랑 앱 💖")),
       drawer: Drawer(
         child: ListView(
           children: [
-            // 로그인 여부에 따른 헤더 표시
             UserAccountsDrawerHeader(
-            //   accountName: const Text("원희님"),
-            //   accountEmail: const Text("wongldia@google.com"),
-            // ),
               accountName: Text(
                 loggedIn ? (widget.user!.displayName) : "로그인이 필요합니다",
               ),
@@ -96,44 +96,38 @@ class _HomePageState extends State<HomePage> {
               selected: _selectedIndex == 1,
               onTap: () => _onSelectMenu(1),
             ),
+            // 🚀 좌측 서랍장 메뉴에도 AI 추가
             ListTile(
-              leading: const Icon(Icons.family_restroom),
-              title: const Text("가계도"),
+              leading: const Icon(Icons.smart_toy),
+              title: const Text("AI 조수"),
               selected: _selectedIndex == 2,
               onTap: () => _onSelectMenu(2),
             ),
             ListTile(
-              leading: const Icon(Icons.calendar_month),
-              title: const Text("일정"),
+              leading: const Icon(Icons.family_restroom),
+              title: const Text("가계도"),
               selected: _selectedIndex == 3,
               onTap: () => _onSelectMenu(3),
             ),
+            ListTile(
+              leading: const Icon(Icons.calendar_month),
+              title: const Text("일정"),
+              selected: _selectedIndex == 4,
+              onTap: () => _onSelectMenu(4),
+            ),
+            const Divider(),
             SwitchListTile(
               title: const Text("다크모드"),
               value: widget.isDarkMode,
               onChanged: (_) => widget.onToggleDarkMode(),
             ),
-
-            // ListTile(
-            //   leading: const Icon(Icons.logout),
-            //   title: const Text("로그아웃"),
-            //   onTap: () async {
-            //     Navigator.pop(context);
-            //     await widget.onLogout(); // 실제 로그아웃 _goLogin() 호출되어 LoginPage로 교체됨
-            //     if (!mounted) return;
-            //     ScaffoldMessenger.of(context)
-            //         .showSnackBar(const SnackBar(content: Text("로그아웃 되었어요.")));
-            //   },
-            // ),
-
-            // 로그인/로그아웃 메뉴를 조건부로 렌더링
             if (!loggedIn)
               ListTile(
                 leading: const Icon(Icons.login),
                 title: const Text("로그인"),
                 onTap: () async {
-                  Navigator.pop(context); // Drawer 닫기
-                  await widget.onLoginRequested(context); // LoginPage로 이동하여 로그인 처리
+                  Navigator.pop(context);
+                  await widget.onLoginRequested(context);
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("로그인 되었습니다.")),
@@ -146,25 +140,28 @@ class _HomePageState extends State<HomePage> {
                 title: const Text("로그아웃"),
                 onTap: () async {
                   Navigator.pop(context);
-                  await widget.onLogout(); // 상태만 초기화
+                  await widget.onLogout();
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("로그아웃 되었어요.")),
                   );
                 },
               ),
-
           ],
         ),
       ),
       body: _getPage(),
+      // 🚀 하단 탭에 AI 아이콘 추가
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
-        onTap: (i) => setState(() => _selectedIndex = i),
+        selectedItemColor: Colors.blueAccent,
+        unselectedItemColor: Colors.grey,
+        onTap: (i) => setState(() => _selectedIndex = i), // BottomNavigationBar용 탭 이벤트
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
           BottomNavigationBarItem(icon: Icon(Icons.article), label: "게시판"),
+          BottomNavigationBarItem(icon: Icon(Icons.smart_toy), label: "AI"), // 🚀 중앙에 AI 탭 추가
           BottomNavigationBarItem(icon: Icon(Icons.family_restroom), label: "가계도"),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: "일정"),
         ],
