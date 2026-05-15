@@ -5,6 +5,8 @@ import 'package:fm2025/models/auth_models.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:flutter_naver_login/flutter_naver_login.dart';
+import 'package:flutter_naver_login/interface/types/naver_login_result.dart';
+import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
 
 class AuthService {
   // test 용도 (true : 테스트 , false : 실제서버)
@@ -239,12 +241,14 @@ class AuthService {
       }
 
       final account = result.account;
-      final accessToken = result.accessToken.accessToken;
+      final accessToken = result.accessToken?.accessToken ?? '';
 
       _accessToken = accessToken;
       _currentUser = User(
-        email: account.email,
-        displayName: account.nickname.isNotEmpty ? account.nickname : account.name,
+        email: account?.email ?? '',
+        displayName: (account?.nickname?.isNotEmpty == true
+            ? account?.nickname
+            : account?.name) ?? '네이버사용자',
       );
       _loggedIn = true;
 

@@ -40,12 +40,13 @@ class _MyAppState extends State<MyApp> {
           ? ThemeData.dark()
           : ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo)),
       home: SplashPage(
-        auth: _auth,
-        isDarkMode: _isDarkMode,
-        onToggleDarkMode: () => setState(() => _isDarkMode = !_isDarkMode),
-        onLogout: _logout,                               // 로그아웃 시 상태만 갱신
-        onLoginRequested: (ctx) => _startLoginFlow(ctx), // 로그인 요청 → 모달
-        // user: _auth.currentUser,                         // Drawer에 표시할 유저
+        targetPage: HomePage(
+          isDarkMode: _isDarkMode,
+          onToggleDarkMode: () => setState(() => _isDarkMode = !_isDarkMode),
+          onLogout: _logout,
+          onLoginRequested: (ctx) => _startLoginFlow(ctx),
+          user: _auth.currentUser,
+        ),
       ),
     );
   }
