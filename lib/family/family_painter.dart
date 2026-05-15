@@ -1,4 +1,5 @@
 // lib/family/family_painter.dart
+import 'dart:math' show min, max;
 import 'package:flutter/material.dart';
 import 'family_model.dart';
 
@@ -11,16 +12,18 @@ class FamilyTreePainter extends CustomPainter {
     this.offset = Offset.zero,
   });
 
+  static const double halfWidth = 60.0;
+  static const double halfHeight = 80.0;
+
   @override
   void paint(Canvas canvas, Size size) {
     if (members.isEmpty) return;
 
-    // 캔버스 좌표 이동 (화면 중앙 정렬)
     canvas.save();
     canvas.translate(offset.dx, offset.dy);
 
     final spousePaint = Paint()
-      ..color = Colors.pinkAccent.withOpacity(0.5)
+      ..color = Colors.pinkAccent.withValues(alpha: 0.8)
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -32,27 +35,11 @@ class FamilyTreePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // 카드 크기의 절반 (중앙에서 상하단까지의 거리)
-    // 카드 높이 160 / 2 = 80
-    const double halfHeight = 80.0;
-
-    // [수정] 자녀 선 그리기용 중복 체크 (부부 선은 중복 체크 없이 그림)
-    final Set<String> processedForChildren = {};
+    // 각 멤버(또는 부부 쌍)를 한 번씩만 처리
+    final Set<String> processedIds = {};
 
     for (var member in members) {
-      // 1. 배우자 연결선 그리기 (무조건 시도)
-      if (member.spouseId != null) {
-        try {
-          final spouse = members.firstWhere((m) => m.id == member.spouseId);
-          // member.position이 이미 '카드의 정중앙'입니다.
-          canvas.drawLine(member.position, spouse.position, spousePaint);
-        } catch (_) {
-          // 배우자 정보를 찾을 수 없으면 패스
-        }
-      }
-
-      // 2. 자녀 연결선 그리기 (중복 방지 필요)
-      if (processedForChildren.contains(member.id)) continue;
+      if (processedIds.contains(member.id)) continue;
 
       FamilyMember? spouse;
       if (member.spouseId != null) {
@@ -61,66 +48,94 @@ class FamilyTreePainter extends CustomPainter {
         } catch (_) {}
       }
 
-      // 자녀 선은 부부 중 한 번만 처리하면 됨
-      processedForChildren.add(member.id);
-      if (spouse != null) {
-        processedForChildren.add(spouse.id);
-      }
+      processedIds.add(member.id);
+      if (spouse != null) processedIds.add(spouse.id);
 
-      // 자녀 목록 합치기
       final Set<String> childrenIds = {...member.childrenIds};
-      if (spouse != null) {
-        childrenIds.addAll(spouse.childrenIds);
+      if (spouse != null) childrenIds.addAll(spouse.childrenIds);
+
+      if (spouse != null && childrenIds.isEmpty) {
+        // 자녀 없는 부부: 분홍 연결선 (카드 중앙 엣지 사이)
+        final Offset leftCenter = member.position.dx <= spouse.position.dx
+            ? member.position
+            : spouse.position;
+        final Offset rightCenter = member.position.dx <= spouse.position.dx
+            ? spouse.position
+            : member.position;
+        canvas.drawLine(
+          leftCenter + const Offset(halfWidth, 0),
+          rightCenter - const Offset(halfWidth, 0),
+          spousePaint,
+        );
+        continue;
       }
 
       if (childrenIds.isEmpty) continue;
 
-      List<Offset> childrenTopPoints = [];
+      final List<Offset> childTops = [];
       for (var childId in childrenIds) {
         try {
           final child = members.firstWhere((m) => m.id == childId);
-          // 자녀의 상단 중앙 좌표 = 중앙 - 반 높이
-          childrenTopPoints.add(child.position - const Offset(0, halfHeight));
+          childTops.add(child.position - const Offset(0, halfHeight));
         } catch (_) {}
       }
-
-      if (childrenTopPoints.isEmpty) continue;
-
-      // 부모 쪽 시작점 결정 (선이 내려오는 곳)
-      Offset startPoint;
-      if (spouse != null) {
-        // 부부인 경우: 두 사람 사이의 정중앙에서, 카드 하단 높이만큼 내려옴
-        final centerOfSpouses = (member.position + spouse.position) / 2;
-        startPoint = centerOfSpouses + const Offset(0, halfHeight);
-      } else {
-        // 한부모인 경우: 내 카드의 하단 중앙
-        startPoint = member.position + const Offset(0, halfHeight);
-      }
-
-      // 선 그리기 로직 (직각 형태)
-      double minX = childrenTopPoints.map((p) => p.dx).reduce((a, b) => a < b ? a : b);
-      double maxX = childrenTopPoints.map((p) => p.dx).reduce((a, b) => a > b ? a : b);
-
-      // 중간 꺾임 높이
-      double midY = (startPoint.dy + childrenTopPoints.first.dy) / 2;
+      if (childTops.isEmpty) continue;
 
       final path = Path();
 
-      // (1) 부모에서 중간 높이까지 수직으로 내리기
-      path.moveTo(startPoint.dx, startPoint.dy);
-      path.lineTo(startPoint.dx, midY);
+      if (spouse != null) {
+        // 자녀 있는 부부: 커플바(카드 중앙) + T자 연결선 (주황 단색)
+        final Offset leftCenter = member.position.dx <= spouse.position.dx
+            ? member.position
+            : spouse.position;
+        final Offset rightCenter = member.position.dx <= spouse.position.dx
+            ? spouse.position
+            : member.position;
 
-      // (2) 자녀들의 범위만큼 수평선 긋기
-      double barLeft = minX < startPoint.dx ? minX : startPoint.dx;
-      double barRight = maxX > startPoint.dx ? maxX : startPoint.dx;
+        // 커플 중앙 Y (카드 중간 높이)
+        final double coupleCenterY =
+            (member.position.dy + spouse.position.dy) / 2;
+        final double coupleCenterX =
+            (member.position.dx + spouse.position.dx) / 2;
 
-      path.moveTo(barLeft, midY);
-      path.lineTo(barRight, midY);
+        // 커플바: 왼쪽 카드 오른쪽 엣지 → 오른쪽 카드 왼쪽 엣지 (카드 중앙 높이)
+        path.moveTo(leftCenter.dx + halfWidth, coupleCenterY);
+        path.lineTo(rightCenter.dx - halfWidth, coupleCenterY);
 
-      // (3) 수평선에서 각 자녀 머리 위로 수직선 내리기
-      for (var childTop in childrenTopPoints) {
-        path.moveTo(childTop.dx, midY);
-        path.lineTo(childTop.dx, childTop.dy);
+        final Offset startPoint = Offset(coupleCenterX, coupleCenterY);
+        final double minChildTopY = childTops.map((p) => p.dy).reduce(min);
+        final double midY = (startPoint.dy + minChildTopY) / 2;
+        final double minX = childTops.map((p) => p.dx).reduce(min);
+        final double maxX = childTops.map((p) => p.dx).reduce(max);
+        final double barLeft = min(minX, startPoint.dx);
+        final double barRight = max(maxX, startPoint.dx);
+
+        path.moveTo(startPoint.dx, startPoint.dy);
+        path.lineTo(startPoint.dx, midY);
+        path.moveTo(barLeft, midY);
+        path.lineTo(barRight, midY);
+        for (var childTop in childTops) {
+          path.moveTo(childTop.dx, midY);
+          path.lineTo(childTop.dx, childTop.dy);
+        }
+      } else {
+        // 혼자 + 자녀: 카드 하단 중앙에서 T자 연결
+        final Offset startPoint = member.position + const Offset(0, halfHeight);
+        final double minChildTopY = childTops.map((p) => p.dy).reduce(min);
+        final double midY = (startPoint.dy + minChildTopY) / 2;
+        final double minX = childTops.map((p) => p.dx).reduce(min);
+        final double maxX = childTops.map((p) => p.dx).reduce(max);
+        final double barLeft = min(minX, startPoint.dx);
+        final double barRight = max(maxX, startPoint.dx);
+
+        path.moveTo(startPoint.dx, startPoint.dy);
+        path.lineTo(startPoint.dx, midY);
+        path.moveTo(barLeft, midY);
+        path.lineTo(barRight, midY);
+        for (var childTop in childTops) {
+          path.moveTo(childTop.dx, midY);
+          path.lineTo(childTop.dx, childTop.dy);
+        }
       }
 
       canvas.drawPath(path, childLinePaint);
